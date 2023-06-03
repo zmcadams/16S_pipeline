@@ -1,21 +1,9 @@
 #!/bin/bash
-#--------------------------------------------------------------------------------
-#  SBATCH CONFIG
-#--------------------------------------------------------------------------------
-#SBATCH --job-name=Q2.back        # name for the job
-#SBATCH --cpus-per-task=1              # number of cores
-#SBATCH --mem=100G                       # total memory
-#SBATCH --nodes 1
-#SBATCH --time 01:00:00                 # time limit in the form days-hours:minutes
-#SBATCH --mail-user=zlmg2b@umsystem.edu    # email address for notifications
-#SBATCH --mail-type=FAIL,END,BEGIN           # email types
-#SBATCH --partition Lewis            # max of 1 node and 4 hours; use `Lewis` for larger jobs
-#--------------------------------------------------------------------------------
 
 echo "### Starting at: $(date) ###"
 
 module load miniconda3
-source activate qiime2-2021.8
+source activate qiime2-2023.5
 
 ## Generate core-metrics results
 ## sampling depth determined from Dada2_table.qzv (lowest feature count/sample > 10,000) - 1
