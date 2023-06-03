@@ -1,25 +1,13 @@
 #!/bin/bash
-#--------------------------------------------------------------------------------
-#  SBATCH CONFIG
-#--------------------------------------------------------------------------------
-#SBATCH --job-name=Q2.front.sh       # name for the job
-#SBATCH --cpus-per-task=10              # number of cores
-#SBATCH --mem=150G                       # total memory
-#SBATCH --nodes 2
-#SBATCH --time 1-00:00:00                 # time limit in the form days-hours:minutes
-#SBATCH --mail-user=zlmg2b@umsystem.edu    # email address for notifications
-#SBATCH --mail-type=FAIL,END,BEGIN           # email types
-#SBATCH --partition Lewis            # max of 1 node and 4 hours; use `Lewis` for larger jobs
-#--------------------------------------------------------------------------------
 
 echo "### Starting at: $(date) ###"
 
-module load miniconda3
-source activate qiime2-2021.8
+source activate qiime2-2023.5
 
+# Build directories
 mkdir sequences
-mkdir $4
-cd $4
+mkdir $1
+cd $1
 mkdir Dada2
 mkdir Dada2/visualization
 mkdir phylogeny
@@ -31,29 +19,20 @@ mkdir transfer/Dada2
 mkdir transfer/taxonomy
 cd ..
 
-# python3 ../workflow/generate_manifest.py -i $1 -l $2 -m $3
-
-# cd demux_seqs
-
-# for file in *R1*.gz; do [ -f "$file" ] || continue; mv -vf "$file" "${file//_*R1_001.fastq.gz/_R1.fastq.gz}"; done
-# for file in *R2*.gz; do [ -f "$file" ] || continue; mv -vf "$file" "${file//_*R2_001.fastq.gz/_R2.fastq.gz}"; done
-
-# cd ..
-
-cp ./metadata.txt ./$4/metadata.txt
+# Store away metadata
+cp ./metadata.txt ./$1/metadata.txt
 
 ## Import demuxed seq (*.fastq.gz) from manifest file
-## manifest generated in generate_manifest.py
-
 qiime tools import \
   --type "SampleData[PairedEndSequencesWithQuality]" \
   --input-format PairedEndFastqManifestPhred33 \
   --input-path ./manifest.csv \
   --output-path ./sequences/demux_seqs.qza
 
-cp ./manifest.csv ./$4/manifest.csv
+# Store away manifest
+cp ./manifest.csv ./$1/manifest.csv
 
-## Visualize imported seqs
+## Visualize/Export imported seqs
 qiime demux summarize \
   --i-data ./sequences/demux_seqs.qza \
   --o-visualization ./sequences/demux_seqs.qzv
@@ -65,6 +44,7 @@ qiime tools export \
 mv ./sequences/per-sample-fastq-counts.tsv \
    ./sequences/per-sample-fastq-counts_untrimmed.tsv
 
+#cleanup
 cd ./sequences/
 rm -rf data.jsonp
 rm -rf demultiplex-summary*
@@ -77,7 +57,6 @@ cd ..
 ## Trim Ilumina primers/adapters from demux seqs
 qiime cutadapt trim-paired \
   --i-demultiplexed-sequences ./sequences/demux_seqs.qza \
-  --p-cores $SLURM_CPUS_ON_NODE \
   --p-adapter-f 'ATTAGAWACCCBDGTAGTCC' \
   --p-front-f 'GTGCCAGCMGCCGCGGTAA' \
   --p-adapter-r 'TTACCGCGGCKGCTGGCAC' \
@@ -87,7 +66,7 @@ qiime cutadapt trim-paired \
   --verbose \
   --o-trimmed-sequences ./sequences/trimmed_demux_seqs.qza 
 
-## Visualize trimmed seqs
+## Visualize/export trimmed seqs
 qiime demux summarize \
   --i-data ./sequences/trimmed_demux_seqs.qza \
   --o-visualization ./sequences/trimmed_demux_seqs.qzv
@@ -99,6 +78,7 @@ qiime tools export \
 mv ./sequences/per-sample-fastq-counts.tsv \
    ./sequences/per-sample-fastq-counts_trimmed.tsv
 
+#cleanup
 cd ./sequences/
 rm -rf data.jsonp
 rm -rf demultiplex-summary*
@@ -108,12 +88,11 @@ rm -rf q2templateassets
 rm -rf *seven-number-summaries.tsv
 cd ..
 
-cp ./sequences/*.tsv ./$4/sequences/
+cp ./sequences/*.tsv ./$1/sequences/
 
-cd $4
+cd $1
 
 ## Denoise seqs to unique Amplicon Sequence Variants (ASVs)
-## Parameters are historical values from IRCF pipeline
 qiime dada2 denoise-paired \
   --i-demultiplexed-seqs ../sequences/trimmed_demux_seqs.qza \
   --p-trunc-len-f 150 \
@@ -129,7 +108,7 @@ qiime metadata tabulate \
   --m-input-file ./Dada2/dada2_stats.qza  \
   --o-visualization ./Dada2/visualization/dada2_stats.qzv
 
-## Filter seqs down to 249-257 in length (based on historical pipeline)
+## Filter seqs down to 249-257 in length
 qiime feature-table filter-seqs \
   --i-data ./Dada2/dada2_rep_seqs.qza \
   --m-metadata-file ./Dada2/dada2_rep_seqs.qza \
@@ -171,8 +150,6 @@ mv ./Dada2/visualization/feature-frequency-detail.csv  \
    ./Dada2/visualization/dada2-feature-frequency-detail.csv
 mv ./Dada2/visualization/sample-frequency-detail.csv \
    ./Dada2/visualization/dada2-sample-frequency-detail.csv
-#mv ./Dada2/visualization/sample-frequency-detail.csv \
-#   ./Dada2/visualization/dada2-sample-frequency-detail.csv
 
 ## Phylogeny generated using denovo approach
 ## Trees used for phylogenetic diversity metrics and empress plots 
@@ -261,10 +238,8 @@ cp ./phylogeny/rooted-tree.qza \
 
 ## TO ADD
 ## Export Dada2 stats
-## Export read counts
 ## generate Excel file
 ## remove line 1 of tables
 ## change #OTUID to featureid in those tables
-
 
 echo "### Ending at: $(date) ###"
