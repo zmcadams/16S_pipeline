@@ -1,1 +1,1 @@
-# 16S_pipeline
+# Scripts to run QIIME2 pipeline.
