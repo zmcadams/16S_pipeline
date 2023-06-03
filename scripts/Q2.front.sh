@@ -163,7 +163,7 @@ qiime phylogeny align-to-tree-mafft-fasttree \
 ## Assign taxonomy based on Silva 138 ref database
 qiime feature-classifier classify-sklearn \
   --i-reads ./Dada2/dada2_rep_seqs_filtered.qza \
-  --i-classifier /home/zlmg2b/data/workflow/feature-classifier/silva-138-99-classifier-515-806.qza \
+  --i-classifier ~/feature-classifier/silva-138-99-classifier-515-806.qza \
   --o-classification ./taxonomy/taxonomy.qza
 
 ## Export taxonomy to TSV file
@@ -235,11 +235,5 @@ cp ./taxonomy/taxonomy.qza \
 mv ./metadata.txt ./metadata_$4.txt
 cp ./phylogeny/rooted-tree.qza \
    ./transfer/
-
-## TO ADD
-## Export Dada2 stats
-## generate Excel file
-## remove line 1 of tables
-## change #OTUID to featureid in those tables
 
 echo "### Ending at: $(date) ###"
